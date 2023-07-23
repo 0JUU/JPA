@@ -1,1 +1,84 @@
+[양방향 매핑]
+
+테이블 연관관계에서는 FK 하나면 양방향이 가능하다.
+하지만 객체 연관관계에서는 getter 메소드로 값을 가져올 수 없다. 도메인에 없기 때문에.
+
+Team과 User의 관계는 1:N이므로 Team에 User를 List로 가져올 수 있도록 작성하면 된다.
+
+
+= Team.class =
+@OneToMany(mappedBy = "team")
+private List<User> users = new ArrayList<>();  // add할 경우 NullPointerException이 뜨지 않도록 ArrayList로 초기화해놓는다.
+
+// @OneToMany(mappedBy = "team") : 무엇과 매핑되어 있는지 알린다.
+
+
+= Main.class =
+..
+EntityManager em = emf.createEntityManager();
+..
+Team team = new Team();
+team.setName("DEV");
+em.persist(team);
+
+User user = new User();
+user.setUserNm("David");
+user.setTeam(team);
+em.persist(user);
+
+User searchUser = em.search(User.class, user.getId());
+List<User> users = searchUser.getTeam().getUsers();
+
+// -------------------------------------------------------------------------------
+
+[객체와 테이블의 연관관계 차이점]
+
+객체 연관관계는 단방향 두 개다.
+
+  회원 -> 팀  //  팀 -> 회원
+
+- 회원에서 팀으로 가려면 참조값을 넣어야 한다.
+- 팀에서 회원으로 가려면 참조값을 넣어야 한다.
+=> 객체의 양방향 관계는 사실상 서로 다른 단방향 관계 2개라고 볼 수 있다.
+
+
+테이블 연관관계는 양방향 한 개다.
+
+  회원 <-> 팀
+
+- 회원 입장에서 팀의 team_id(FK)를 가져오면 회원이 소속된 팀을 알 수 있다.
+- 팀 입장에서 회원의 team_id(FK)를 알면 소속된 회원들의 정보를 알 수 있다.
+=> 테이블은 FK 하나로 두 개의 테이블의 연관관계를 관리할 수 있다.
+
+ex) SELECT * FROM USER U JOIN TEAM T ON U.TEAM_ID = T.TEAM_ID;
+    SELECT * FROM TEAM T JOIN USER U ON T.TEAM_ID = U.TEAM_ID;
+
+// -------------------------------------------------------------------------------
+
+객체 연관관계에서....
+User 객체가 Team team을 갖고 있고, Team 객체가 List useres를 갖는 경우, 
+테이블 USER의 TEAM_ID(FK)를 어느 것으로 관리해야 하는가?
+
+=> 둘 중 하나로 FK를 관리해야 한다.
+
+
+[양방향 매핑 규칙]
+1. 객체의 두 관계 중 하나를 연관관계 주인으로 지정한다.
+2. 연관관계의 주인만 FK를 관리할 수 있다. (등록 및 수정) ★
+3. 주인이 아닌 관계는 읽기만 할 수 있다. (등록 및 수정X) ★
+4. 주인은 mappedBy 속성을 사용하면 안되고, 주인이 아닌 관계가 mappedBy 속성으로 주인을 지정해야 한다.
+
+
+[어떤 객체 관계를 주인으로 정할 것인가?]
+FK가 있는 객체를 주인으로 정하면 된다. ★★★
+@ManyToOne 어노테이션 작성된 쪽이 무조건 주인이다. (1:N 관계에서 N이 주인)
+
+
+= Team.class =
+@OneToMany(mappedBy = "team")   // 주인이 아닌 관계
+private List<User> users = new ArrayList<>();
+
+= User.class =
+@ManyToOne   // 주인
+private Team team;
 
