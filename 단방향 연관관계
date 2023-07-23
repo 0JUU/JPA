@@ -1,1 +1,83 @@
+[단방향 연관관계]
+객체와 테이블 연관관계의 차이가 무엇인지?
+객체의 참조와 테이블의 외래키(FK)를 매핑하는 것.
 
+연관관계에는 단방향과 양방향이 있다.
+관계형 DB에서 '다중성'이라는 용어를 사용한다. -> N:1, 1:N, 1:1, N:N
+객체 양방향 연관관계는 관리 주인이 필요하다. ★★★
+
+// ------------------------------------------------------------------------------
+
+객체를 테이블에 맞춰 데이터 중심으로 모델링하게 되면 식별자로 다시 조회를 해와야 한다.
+=> 객체 지향적인 방법이 아니다.
+
+객체를 테이블에 맞춰 데이터 중심으로 모델링하게 되면 협력 관계를 만들 수 없다.
+=> 테이블은 FK로 조인하여 연관된 테이블을 찾는데, 이때 객체는 참조를 사용하여 연관된 객체를 찾는다.
+
+
+= User.class =
+@Column(name = "team_id")
+private Long team;
+
+
+= Main.class =
+..
+EntityManager em = emf.createEntityManager();
+..
+Team team = new Team();
+team.setName("DEV");
+em.persist(team);
+
+User user = new User();
+user.setUserNm("David");
+user.setTeamId(team.getId());
+em.persist(user);
+
+User searchUser = em.search(User.class, user.getId());
+
+Long searchTeamId = searchUser.getTeamId();
+Team searchUser = em.search(Team.class, searchTeamId);
+
+// ------------------------------------------------------------------------------
+
+객체 지향적으로 모델링하기 위해 객체 연관관계를 사용한다.
+
+= User.class =
+// @Column(name = "team_id")
+// private Long team;
+
+@ManyToOne
+@JoinColumn(name = "team_id")
+private Team team;
+
+
+@ManyToOne : Team과 User의 관계가 1:N이다. (연관관계를 정의해야 한다.)
+@JoinColumn(name = "team_id") : 테이블의 team_id 컬럼과 team을 조인한다.
+
+
+= Main.class =
+..
+EntityManager em = emf.createEntityManager();
+..
+Team team = new Team();
+team.setName("DEV");
+em.persist(team);
+
+User user = new User();
+user.setUserNm("David");
+
+// user.setTeamId(team.getId());
+user.setTeam(team);
+
+em.persist(user);
+
+User searchUser = em.search(User.class, user.getId());
+
+// Long searchTeamId = searchUser.getTeamId();
+// Team searchUser = em.search(Team.class, searchTeamId);
+
+Team searchTeam = searchUser.getTeam();
+
+// 만약 새로운 팀으로 업데이트하고 싶다면,
+// Team newTeam = em.find(Team.class, 100L);
+// searchUser.setTeam(newTeam);
