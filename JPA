@@ -1,0 +1,46 @@
+객체와 RDBMS의 차이
+1. 상속
+2. 연관관계
+3. 데이터 타입
+4. 데이터 식별 방법
+
+=================================================================
+
+1. 상속
+ DB에 저장할 객체에 상속 관계를 쓰지 않는다.
+
+2. 연관관계
+ 1) 객체는 참조를 사용한다.
+ 2) 테이블은 외래키(FK)를 사용한다.
+
+ *객체를 테이블에 맞춰 모델링
+  class User {
+    String id;  // USER_ID
+    Long teamId;  // TEAM_ID
+    String userNm;  // USER_NM
+  }
+  class Team {
+    Long id;  // TEAM_ID
+    String name;  // NAME
+  }
+
+ *객체를 테이블에 맞춰 저장
+  INSERT INTO USER(USER_ID, TEAM_ID, USER_NM) VALUES ...
+-----------
+ *객체 모델링 저장
+  class User {
+    String id;  // USER_ID
+    Team team;  // 참조로 연관관계★
+    String UserNm;  // USER_NM
+
+    Team getTeam() {
+      return team;
+    }
+  }
+  class Team {
+    Long id;  // TEAM_ID (PK)
+    String name;  // USER_NM
+  }
+
+  INSERT INTO USER(USER_ID, TEAM_ID, USER_NM) VALUES ...
+  TEAM_ID은 User 클래스의 user.getTeam().getId;
