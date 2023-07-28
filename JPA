@@ -9,6 +9,7 @@
 1. 상속
  DB에 저장할 객체에 상속 관계를 쓰지 않는다.
 
+
 2. 연관관계
  1) 객체는 참조를 사용한다.
  2) 테이블은 외래키(FK)를 사용한다.
@@ -26,7 +27,9 @@
 
  *객체를 테이블에 맞춰 저장
   INSERT INTO USER(USER_ID, TEAM_ID, USER_NM) VALUES ...
+
 -----------
+
  *객체 모델링 저장
   class User {
     String id;  // USER_ID
@@ -44,3 +47,23 @@
 
   INSERT INTO USER(USER_ID, TEAM_ID, USER_NM) VALUES ...
   TEAM_ID은 User 클래스의 user.getTeam().getId;
+
+ * 객체 모델링 조회
+  SELECT U.*, T.*
+  FROM User U
+  JOIN Team T ON U.TEAM_ID T.TEAM_ID
+
+ public User find(Stringg userId) {
+  User user = new User();  // db에서 조회한 회원 정보를 모두..
+  Team team = new Team();  // db에서 조회한 팀 정보를 모두..
+
+  user.setTeam();  // 회원과 팀의 관계를 설정
+  return user;
+ }
+
+ * 컬렉션에서 관리
+  list.add(user);
+
+  User user = list.get(userId);
+  Team team = user.getTeam();
+
