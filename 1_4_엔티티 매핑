@@ -1,0 +1,210 @@
+1. 엔티티 매핑
+ 1) 객체와 테이블 매핑
+  (1) @Entity
+   a. @Entity가 있는 클래스는 JPA가 관리하며, 엔티티라고 한다.
+   b. JPA를 사용하여 테이블과 매핑할 클래스는 @Entity가 필수이다.
+   c. 주의할 점
+    c-1. 기본 생성자는 필수이다. (파라미터가 없는 public 또는 protected 생성자)
+    c-2. final 클래스, enum, interface, inner 클래스는 사용하지 않는다.
+    c-3. 저장할 필드에 final을 사용하지 않는다.
+   d. 속성 name
+    d-1. JPA에서 사용할 엔티티명을 지정한다. ex. @Entity(name="User")
+    d-2. 기본값은 클래스명
+    d-3. 같은 클래스명이 없으면 되도록 기본값을 사용한다.
+    
+  (2) @Table
+   a. 속성 name
+    a-1. 매핑할 테이블명을 지정한다.
+    a-2. 기본값은 엔티티명
+   b. 속성 catalog
+    b-1. DB catalog를 매핑한다.
+   c. 속성 schema
+    c-1. DB schema를 매핑한다.
+   d. 속성 uniqueConstraints(DDL)
+    d-1. DDL 생성 시 Unique 제약 조건을 생성한다.
+
+  (3) 데이터베이스 스키마 자동 생성
+   a. DDL을 애플리케이션 실행 시점에 자동 생성한다.
+   b. 테이블 중심에서 객체 중심으로.
+   c. Database Dialect를 활용하여 DB에 맞는 적절한 DDL을 생성한다.
+   d. 속성
+    d-1. create : 기존 테이블 삭제 후 다시 생성한다. (DROP + CREATE)
+    d-2. create-drop : create와 같으나 종료시점에 테이블을 DROP한다.
+    d-3. update : 변경부분만 반영한다. (운영DB에선 사용하면 안된다.)
+    d-4. validate : 엔티티와 테이블이 정상 매핑됐는지만 확인한다.
+    d-5. none : 사용하지 않는다.
+   e. 주의할 점
+    e-1. 운영장비에는 create, create-drop, update를 절대 사용하면 안된다.
+    e-2. 개발 초기 단계에선 create / update
+    e-3. 테스트 서버에선 update / validate
+    e-4. 스테이징과 운영 서버에선 validate / none
+   f. DDL 생성 기능
+    f-1. 제약조건 추가: 
+     만약 회원이름은 필수에 10자를 초과하면 안될 경우에는
+     @Column(nullable=false, length=10)
+    f-2. Unique 제약조건 추가
+     @Table(uniqueConstraints={@UniqueConstraints(name="NAME_AGE_UNIQUE", columnNames={"NAME", "AGE"})})
+    f-3. DDL 생성 기능은 DDL을 자동 생성할 때만 사용된다. JPA 실행 로직에는 영향 없다.
+
+ 2) 필드와 컬럼 매핑
+  a. @Column
+   a-1. 컬럼을 매핑한다.
+   a-2. 속성 name
+    a-2-1. 필드와 매핑할 테이블의 컬럼명을 지정한다.
+    a-2-2. 기본값은 객체의 필드명
+   a-3. 속성 insertable, updatable
+    a-3-1. 등록, 변경 가능 여부를 설정한다.
+    a-3-2. 기본값은 TRUE
+   a-4. 속성 nullable(DDL)
+    a-4-1. null값의 허용 여부를 설정한다. 
+    a-4-2. false로 설정하면 DDL 생성 시에 not null 제약조건이 붙는다.
+   a-5. 속성 unique(DDL)
+    a-5-1. @Table의 uniqueConstraints와 같지만 한 컬럼에 간단히 Unique 제약조건을 걸 때 사용한다.
+   a-6. 속성 columnDefinition(DDL)
+    a-6-1. 데이터베이스 컬럼 정보를 직접 줄 수 있다.
+     ex) varchar(50) default 'EMPTY'
+    a-6-2. 기본값은 필드의 자바 타입과 방언 정보를 사용한다.
+   a-7. 속성 length(DDL)
+    a-7-1. 문자 길이 제약조건, String 타입에만 사용한다.
+    a-7-2. 기본값은 255
+   a-8. 속성 precision, scale(DDL)
+    a-8-1. BigDecimal 타입에서 사용한다.(BigInteger도 사용 가능)
+    a-8-2. precision은 소수점을 포함한 전제 자릿수를 설정하고, scale은 소수의 자릿수를 설정한다.
+           double, float 타입에는 적용되지 않으므로, 매우 큰 숫자나 정밀한 소수를 다뤄야할 때만 사용한다.
+     ex) precision=20, scale=3
+   
+  b. @Temporal
+   b-1. 날짜 타입(java.util.Date, java.util.Calendar)을 매핑한다.
+   b-2. LocalDate, LocalDateTime을 사용할 때는 생략 가능하다.(최신 Hibernate에서 지원)
+   b-3. 속성 value
+    b-3-1. TemporalType.DATE : 날짜, 데이터베이스 date 타입과 매핑한다.(ex. 2023-07-29)
+    b-3-2. TemporalType.TIME : 시간, 데이터베이스 time 타입과 매핑한다.(ex. 14:39:00)
+    b-3-3. TemporalType.TIMESTAMP : 날짜와 시간, 데이터베이스 timestamp 타입과 매핑한다.(ex. 2023-07-29 14:39:00)
+  
+  c. @Enumerated
+   c-1. enum 타입을 매핑한다.
+   c-2. 속성 value
+    c-2-1. EnumType.ORDINAL : enum 순서를 DB에 저장한다. (주의. ORDINAL 사용하지 않는다.)
+           EnumType.STRING : enum 이름을 DB에 저장한다.
+    c-2-2. 기본값은 EnumType.ORDINAL
+  
+  d. @Lob
+   d-1. BLOB, CLOB을 매핑한다.
+   d-2. @Lob에는 속성이 없다.
+   d-3. 매핑하는 필드 타입이 문자면 CLOB로 매핑하고, 나머지는 BLOB로 매핑한다.
+    d-3-1. CLOB: String, char[], java.sql.CLOB
+    d-3-2. BLOB: byte[], java.sql.BLOB
+  
+  e. @Transient
+   e-1. 특정 필드를 컬럼에 매핑하지 않는다.(매핑 무시)
+   e-2. DB에 저장 및 조회 불가하다.
+   e-3. 주로 메모리 상에서만 임시로 특정 값을 보관하고 싶을 때 사용한다.
+    @Transient
+    private Integer temp;
+  
+ 3) 기본키 매핑
+  a. @Id : 직접 할당할 때 사용한다.
+  b. @GeneratedValue : 자동 생성할 때 사용한다. ex) @GeneratedValue(strategy=GenerationType.AUTO)
+   b-1. IDENTITY : 데이터베이스에 위임한다. MYSQL
+   b-2. SEQUENCE : 데이터베이스 시퀀스 오브젝트를 사용한다. ORACLE
+    b-2-1. @SequenceGenerator가 필요하다.
+   b-3. TABLE : 키 생성용 테이블을 사용한다. 모든 DB에서 사용한다.
+    b-3-1. @TableGenerator가 필요하다.
+   b-4. AUTO : 방언에 따라 자동 지정한다. AUTO가 기본값.
+
+ 4) 연관관계 매핑
+  a. @ManyToOne
+  b. @JoinColumn
+
+-----------------------------------------------------------------------------------------------
+[@GeneratedValue(strategy=GenerationType.XXXX)]
+1. IDENTITY 전략
+ 1) 기본키 생성을 데이터베이스에 위임한다.
+ 2) 주로 MySQL, PostgreSQL, MSSQL, DB2에서 사용한다.
+ 3) JPA는 일반적으로 트랜잭션 커밋 시점에 INSERT SQL을 실행한다.
+ 4) AUTO_INCREMENT는 데이터베이스에 INSERT SQL을 실행한 이후에 ID값을 알 수 있다.
+ 5) em.persist() 시점에 즉시 INSERT SQL을 실행하고 DB에서 식별자를 조회한다.
+
+2. SEQUENCE 전략
+ 1) 데이터베이스 시퀀스는 Unique값을 순서대로 생성하는 특별한 데이터베이스 오브젝트
+ 2) Oracle, PostgreSQL, DB2, H2에서 사용한다.
+ 3) 매핑
+  @Entity
+  @SequenceGenerator(
+          name="USER_SEQ_GENERATOR",
+          sequenceNm="USER_SEQ",
+          InitialValue=1, allocationSize=1)
+  public class User {
+      @Id
+      @GeneratedValue(strategy=GenerationType.SEQUENCE,
+              generator="USER_SEQ_GENERATOR")
+      private Long id;
+  }
+ 4) @SequenceGenerator
+  4-1) 속성 name
+   4-1-1) 식별자 생성기명을 지정한다.(필수)
+  4-2) 속성 sequenceName
+   4-2-1) 데이터베이스에 등록되어 있는 시퀀스명
+   4-2-2) 기본값은 hibernate_sequence
+  4-3) 속성 initialValue
+   4-3-1) DDL 생성 시에만 사용되고, 시퀀스 DDL을 생성할 때 처음 시작하는 수를 지정한다.
+   4-3-2) 기본값은 1
+  4-4) 속성 allocationSize
+   4-4-1) 시퀀스를 한 번 호출했을 때 증가하는 수
+   4-4-2) 데이터베이스 시퀀스 값이 하나씩 증가하도록 설정돼있다면 해당 값을 반드시 1로 설정해야 한다.
+   4-4-3) 기본값은 50
+  4-5) 속성 catalog, schema
+   4-5-1) 데이터베이스 catalog, schema 이름
+
+3. TABLE 전략
+ 1) 키 생성용 테이블을 만들어서 데이터베이스 시퀀스를 모방한다.
+ 2) 장점: 모든 데이터베이스에 적용이 가능하다.
+    단점: 성능이 좋지 않다.
+ 3) 매핑
+  create table A_SEQUENCES (
+      sequence_nm varchar(255) not null,
+      next_val bigint,
+      primary key ( sequence_nm )
+  )
+
+  @Entity
+  @TableGenerator(
+          name="USER_SEQ_GENERATOR",
+          table="A_SEQUENCES",
+          pkColumnValue="USER_SEQ", allocationSize=1)
+  public class User {
+      @Id
+      @GeneratedValue(strategy=GenerationType.TABLE,
+                      generator="USER_SEQ_GENERATOR")
+      private Long id;
+  }
+  4) @TableGenerator
+   4-1) 속성 name
+    4-1-1) 식별자 생성기명을 지정한다.(필수)
+   4-2) 속성 table
+    4-2-1) 키 생성 테이블명을 지정한다.
+    4-2-2) 기본값은 hibernate_sequences
+   4-3) 속성 pkColumnName
+    4-3-1) 시퀀스 컬럼명을 지정한다.
+    4-3-2) 기본값은 sequence_name
+   4-4) 속성 valueColumnName
+    4-4-1) 시퀀스값 컬럼명을 지정한다.
+    4-4-2) 기본값은 next_val
+   4-5) 속성 pkColumnValue
+    4-5-1) 키로 사용할 값 이름을 지정한다.
+    4-5-2) 기본값은 엔티티명
+   4-6) 속성 initialValue
+    4-6-1) 초기값. 마지막으로 생성된 값이 기준이다.
+    4-6-2) 기본값은 0
+   4-7) 속성 allocationSize
+    4-7-1) 시퀀스를 한 번 호출했을 때 증가하는 수를 설정한다. (성능 최적화에 사용된다.)
+    4-7-2) 기본값은 50
+   4-8) 속성 catalog, schema
+    4-8-1) 데이터베이스 catalog, schema 이름을 지정한다.
+   4-9) 속성 uniqueConstraints(DDL)
+    4-9-1) Unique 제약조건을 지정할 수 있다.
+
+4. 권장하는 식별자 전략
+ 1) 기본키 제약조건: null이 아니고 유일하며, 변하면 안된다.
+ 2) 대리키(대체키)를 사용하는 것이 좋다. - 주민등록번호도 기본키로 적절치 않다.
+ 3) 권장하는 전략: Long형 + 대체키 + 키 생성 전략을 사용한다.
