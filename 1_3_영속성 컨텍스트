@@ -1,0 +1,181 @@
+JPA에서 중요한 점
+1. 객체와 RDBMS 매핑하기
+2. 영속성 컨텍스트★★★
+
+------------------------------------------------------------------------------------------------
+
+1. EntityManagerFactory와 EntityManager 구조
+
+      ----------------------- Web Application ----------------------------------
+      |                                        --------------------------      |
+      |                                 -------|  EntityManagerFactory  |      |
+      |                                 |      --------------------------      |
+      |                                 |          |                           |
+      |                     ----생성----|     ------                           |
+      |                     |            ----┘                                 |
+      |                     ↓            |                                     |
+      |        -------------------       |                                     |
+요청1 |--------|  EntityManager1  |     생성          -------------             |
+      |        -------------------       |           |    conn    |----------------┐    --------
+      |        ------------------- ←------           |    conn    |----------------|----|  DB  |
+요청2 |--------|  EntityManager2  |                  |    conn    |----------------┘     -------
+      |        ------------------- -------사용-----→ |   커넥션풀  |            |
+      |                                              --------------            |
+      --------------------------------------------------------------------------
+
+
+2. 영속성 컨텍스트(Persistence Context)
+ 1) JPA를 이해하는 데 가장 중요한 용어이다.
+ 2) 엔티티를 영구적으로 저장하는 환경이라는 의미이다.
+ 3) EntityManager.persist(entity);
+ 4) 영속성 컨텍스트는 논리적 개념으로, EntityManager를 통해 접근한다.
+
+
+3. J2EE나 Spring Framework와 같은 Container 환경
+ => EntityManager와 영속성 컨텍스트가 N:1의 관계이다.
+
+4. 엔티티의 생명주기
+                                --------------
+                                |  Detached  |        
+                                --------------
+                                     ↑ ↓
+                           detach()  ↑ ↓
+                            clear()  ↑ ↓  merge()
+                            close()  ↑ ↓
+                                     ↑ ↓
+     ---------     persist()     -------------     find() - JPQL
+     |  New  |-----------------> |  Managed  | <------------------┐
+     ---------                   ------------- -----------------┐ |
+                                     ↑ ↓                        | |          ------------
+                                     ↑ ↓                        | └--------- |          |
+                          persist()  ↑ ↓  remove()              └----------> |    DB    |
+                                     ↑ ↓                          flush()    |          |
+                                     ↑ ↓                                     ------------
+                                 -------------                                   ↑
+                                 |  Removed  |-----------------------------------┘
+                                 -------------              flush()
+
+ 1) 비영속(new/transient): 영속성 컨텍스트와 전혀 관계가 없는 새로운 상태
+  ----------                -------------------------
+  |  user  |                |     EntityManager     |  
+  ---------                 -------------------------
+  // 객체 생성(비영속)
+  User user = new User();
+  user.setId("user1");
+  user.setUserNm("홍길동");
+  
+ 2) 영속(managed): 영속성 컨텍스트에 관리되는 상태
+  -----------------------
+  |    EntityManager    |
+  |    ----------       |
+  |    |  user  |       |
+  |    ----------       |
+  -----------------------
+  // 객체 생성(비영속)
+  User user = new User();
+  user.setId("user1");
+  user.setUserNm("홍길동");
+
+  EntityManager em = emf.createEntityManager();
+  em.getTransaction().begin();
+
+  // 객체 저장(영속)
+  em.persist(user);
+
+ 3) 준영속(detached): 영속성 컨텍스트에 저장되었다가 분리된 상태
+  // User 엔티티를 영속성 컨텍스트에서 분리(준영속)
+  em.detach(user);
+
+ 4) 삭제(removed): 삭제된 상태
+  // 객체 삭제
+  em.remove(user);
+
+
+5. 영속성 컨텍스트의 이점
+ 1) 1차 캐시
+  // 객체 생성(비영속)
+  User user = new User();
+  user.setId("user1");
+  user.setUserNm("홍길동");
+
+  // 1차 캐시에 저장
+  em.persist(user);
+
+  // 1차 캐시에서 조회
+  User findUser = em.find(User.class, "user1");
+
+  ## DB에서 조회
+  User findUser2 = em.find(User.class, "user2");
+ 
+ 2) 동일성 보장
+  - 1차 캐시로 반복 가능한 읽기 등급의 트랜잭션 격리 수준을 DB가 아닌 애플리케이션 차원에서 제공한다.
+  User user1 = em.find(User.class, "user1");
+  User user2 = em.find(User.class, "user1");
+
+  System.out.println(user1 == user2);
+ 
+ 3) 트랜잭션을 지원하는 쓰기 지연
+  EntityManager em = emf.createEntityManager();
+  EntityTransaction et = em.getTransaction();  // EntityManager는 데이터 변경 시 트랜잭션을 시작해야 한다.
+  et.begin();  // 트랜잭션 시작
+
+  em.persist(user1);
+  em.persist(user2);  // INSERT SQL 안보냄
+
+  et.commit();  // 트랜잭션 커밋
+ 
+ 4) 변경 감지
+  EntityManager em = emf.createEntityManager();
+  EntityTransaction et = em.getTransaction();  // EntityManager는 데이터 변경 시 트랜잭션을 시작해야 한다.
+  et.begin();
+  
+  User user1 = em.find(User.class, "user1");  // 영속 엔티티 조회
+
+  user1.setUserNm("김영희");
+  user1.setPNo("01011112222");  // 영속 엔티티 데이터 수정
+
+  et.commit();
+
+  ## 엔티티 삭제
+  User user1 = em.find(User.class, "user1");
+  em.remove(user1);
+ 
+ 5) 지연 로딩
+
+
+6. flush()
+ : 영속성 컨텍스트의 변경내용을 DB에 반영한다.
+   영속성 컨텍스트를 비우지 않는다.
+   영속성 컨텍스트의 변경내용을 DB에 동기화한다.
+
+ 1) 플러시 발생
+  a. 변경 감지
+  b. 수정된 엔티티 쓰기 지연 SQL 저장소에 등록
+  c. 쓰기 지연 SQL 저장소의 쿼리를 DB에 전송(등록, 수정, 삭제)
+
+ 2) 영속성 컨텍스트를 플러시하려면?
+  a. em.flush() : 직접 호출
+  b. 트랜잭션 커밋 : 플러시 자동 호출
+  c. JPQL 쿼리 실행 : 플러시 자동 호출
+
+  em.persist(user1);
+  em.persist(user2);
+  em.persist(user3);
+
+  query = em.createQuery("select u from User u", User.class);
+  List<User> users = query.getResultList();
+
+ 3) 플러시 모드 옵션
+  a. FlushModeType.AUTO : 커밋이나 쿼리 실행할 때 플러시. 기본값.
+  b. FlushModeType.COMMIT : 커밋할 때만 플러시
+  => 트랜잭션이라는 작업 단위가 중요하다면 커밋 직전에만 동기화하면 된다.
+
+  
+7. 준영속 상태
+- 영속 -> 준영속
+- 영속 상태의 엔티티가 영속성 컨텍스트에 분리된 상태이다.(detached)
+- 영속성 컨텍스트가 제공하는 기능을 사용하지 못한다.
+- 준영속 상태로 만드려면?
+ - em.detach(entity) : 특정 엔티티만 준영속 상태로 전환한다.
+ - em.clear() : 영속성 컨텍스트를 완전히 초기화한다.
+ - em.close() : 영속성 컨텍스트를 종료한다.
